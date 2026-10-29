@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diabetes risk estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  --bg:#EEF2F1;--surface:#FFFFFF;--ink:#12303B;--muted:#587079;--line:#D3DDDC;--track:#E1E9E8;
+  --accent:#0E7C7B;--warn:#B7791F;--up:#C8453F;--soft:#F5F8F7;
+  --sans:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1A1F;--surface:#142830;--ink:#E5EFEE;--muted:#92A9B0;--line:#254049;--track:#21383F;
+    --accent:#3CC0BC;--warn:#E3B04B;--up:#F0746D;--soft:#102229;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1A1F;--surface:#142830;--ink:#E5EFEE;--muted:#92A9B0;--line:#254049;--track:#21383F;
+  --accent:#3CC0BC;--warn:#E3B04B;--up:#F0746D;--soft:#102229;color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 48px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:28px}
+h1{font:500 30px/1.15 var(--serif);margin:0;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:32px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+h2{font:600 15px/1.3 var(--sans);margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+button{font:500 13px var(--sans);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+fieldset{border:0;margin:0 0 32px;padding:0}
+legend{font:600 15px var(--sans);padding:0;margin-bottom:2px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}
+@media (max-width:560px){.fields{grid-template-columns:1fr}}
+.field{padding:14px 0;border-top:1px solid var(--line)}
+.field .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.field label{font-weight:500}
+.unit{color:var(--muted);font-size:12px}
+.field .note{color:var(--muted);font-size:12px;margin:2px 0 8px;min-height:18px}
+.ctl{display:flex;align-items:center;gap:12px}
+input[type=number]{width:84px;font:500 15px var(--sans);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.warn{color:var(--warn);font-size:12px;margin-top:6px;display:none}
+.field.out .warn{display:block}
+aside{position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+@media (max-width:900px){aside{position:static}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+.gauge{position:relative;width:100%;max-width:300px;margin:4px auto 0}
+.gauge svg{display:block;width:100%;height:auto}
+.arc{fill:none;stroke-width:16;stroke-linecap:round}
+.arc.t{stroke:var(--track)}
+.arc.v{transition:stroke-dashoffset .5s ease,stroke .3s}
+.readout{position:absolute;left:0;right:0;bottom:2px;text-align:center}
+.pct{font:500 56px/1 var(--serif);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ends{display:flex;justify-content:space-between;max-width:300px;margin:2px auto 0;color:var(--muted);font-size:12px;padding:0 6px}
+.band{text-align:center;margin-top:14px;font-weight:600;font-size:16px}
+.verdict{text-align:center;color:var(--muted);font-size:13px;margin:2px 0 0}
+hr{border:0;border-top:1px solid var(--line);margin:22px 0 18px}
+.drv{display:grid;gap:12px}
+.rowx .meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;gap:8px}
+.rowx .meta span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{position:relative;height:8px;background:var(--soft);border-radius:4px}
+.bar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted);opacity:.6}
+.fill{position:absolute;top:0;bottom:0;border-radius:4px;transition:width .35s ease}
+.fill.up{left:50%;background:var(--up)}
+.fill.dn{right:50%;background:var(--accent)}
+.legend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:10px}
+details{margin-top:24px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:13px}
+summary{cursor:pointer;color:var(--ink);font-weight:500}
+details p{margin:8px 0 0;max-width:68ch}
+.fine{margin-top:20px;font-size:12px;color:var(--muted);max-width:70ch}
+@media (prefers-reduced-motion:reduce){.arc.v,.fill{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Diabetes risk estimator</h1>
+    <p>Logistic regression model · 8 clinical inputs</p>
+  </header>
+
+  <div class="grid">
+    <main>
+      <div class="toolbar">
+        <button id="ex-low" type="button">Load typical profile</button>
+        <button id="ex-high" type="button">Load higher-risk profile</button>
+      </div>
+      <fieldset>
+        <legend>Clinical measurements</legend>
+        <p class="sub">Enter the patient’s most recent values.</p>
+        <div class="fields" id="g1"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Body and history</legend>
+        <p class="sub">Body measurements and background factors.</p>
+        <div class="fields" id="g2"></div>
+      </fieldset>
+      <p class="fine">This tool is for education and demonstration. It estimates risk from a statistical model and does not diagnose diabetes. Anyone concerned about their health should speak with a qualified clinician.</p>
+    </main>
+
+    <aside>
+      <div class="panel" aria-live="polite">
+        <h2>Estimated risk</h2>
+        <p class="sub">Updates as you change the inputs.</p>
+        <div class="gauge">
+          <svg viewBox="0 0 220 124" role="img" aria-label="Risk gauge">
+            <path class="arc t" d="M 20 110 A 90 90 0 0 1 200 110"/>
+            <path class="arc v" id="arc" d="M 20 110 A 90 90 0 0 1 200 110" stroke-dasharray="282.74" stroke-dashoffset="282.74"/>
+            <line x1="110" y1="8" x2="110" y2="32" stroke="var(--surface)" stroke-width="3"/>
+          </svg>
+          <div class="readout"><div class="pct" id="pct">–</div></div>
+        </div>
+        <div class="ends"><span>0%</span><span>50% threshold</span><span>100%</span></div>
+        <div class="band" id="band"></div>
+        <p class="verdict" id="verdict"></p>
+        <hr>
+        <h2>What’s driving this estimate</h2>
+        <p class="sub">Effect of each input on the odds, compared with an average patient in the training data.</p>
+        <div class="drv" id="drv"></div>
+        <div class="legend"><span>Lowers risk</span><span>Raises risk</span></div>
+      </div>
+      <details>
+        <summary>About this model</summary>
+        <p>Scikit-learn LogisticRegression (L2 penalty, C = 1.0, lbfgs solver), saved with version 1.6.1. The probability is the sigmoid of the intercept plus the weighted sum of the scaled inputs, and a result of 50% or higher is classified as positive.</p>
+        <p>The pickle file doesn’t include its feature scaler. Inputs here are min-max scaled using the standard Pima Indians dataset ranges, which reproduced sensible predictions on known records. If you trained with different preprocessing, update the ranges in the script.</p>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script>
+// Model parameters from logistmodel.pkl
+const B0 = -5.21929958;
+const F = [
+  {k:'glucose',  g:1, label:'Glucose',        unit:'mg/dL',   note:'Plasma glucose, 2 hours after a glucose drink', c:4.23292564, min:0,    max:199,  ref:120.9,  ui:[0,300,1],    typ:105},
+  {k:'bp',       g:1, label:'Blood pressure', unit:'mm Hg',   note:'Diastolic',                                     c:0.02621004, min:0,    max:122,  ref:69.1,   ui:[0,160,1],    typ:70},
+  {k:'insulin',  g:1, label:'Insulin',        unit:'µU/mL',   note:'Serum insulin, 2 hours after a glucose drink',  c:-0.40195678,min:0,    max:846,  ref:79.8,   ui:[0,900,1],    typ:80},
+  {k:'skin',     g:1, label:'Skin thickness', unit:'mm',      note:'Triceps skinfold',                              c:0.93793388, min:0,    max:99,   ref:20.5,   ui:[0,100,1],    typ:22},
+  {k:'bmi',      g:2, label:'BMI',            unit:'kg/m²',   note:'Body mass index',                               c:2.95339409, min:0,    max:67.1, ref:32.0,   ui:[0,70,0.1],   typ:27},
+  {k:'dpf',      g:2, label:'Family history score', unit:'', note:'Diabetes pedigree function',                    c:1.08660566, min:0.078,max:2.42, ref:0.4719, ui:[0,2.5,0.001],typ:0.35},
+  {k:'age',      g:2, label:'Age',            unit:'years',   note:'',                                              c:1.38578165, min:21,   max:81,   ref:33.24,  ui:[18,90,1],    typ:28},
+  {k:'preg',     g:2, label:'Pregnancies',    unit:'count',   note:'Number of times pregnant',                      c:0.07212422, min:0,    max:17,   ref:3.845,  ui:[0,20,1],     typ:2}
+];
+const HIGH = {glucose:165,bp:78,insulin:200,skin:35,bmi:36.5,dpf:0.8,age:52,preg:6};
+const state = {};
+const scale = (f,v)=>(v-f.min)/(f.max-f.min);
+const el = id=>document.getElementById(id);
+const fmt = (f,v)=> f.ui[2]<1 ? (+v).toFixed(f.ui[2]===0.1?1:2) : String(Math.round(v));
+
+function build(){
+  F.forEach(f=>{
+    const d=document.createElement('div');d.className='field';d.id='f-'+f.k;
+    d.innerHTML=`<div class="top"><label for="n-${f.k}">${f.label}</label><span class="unit">${f.unit}</span></div>
+      <div class="note">${f.note}</div>
+      <div class="ctl"><input type="number" id="n-${f.k}" min="${f.ui[0]}" max="${f.ui[1]}" step="${f.ui[2]}">
+      <input type="range" id="r-${f.k}" min="${f.ui[0]}" max="${f.ui[1]}" step="${f.ui[2]}" aria-label="${f.label} slider"></div>
+      <div class="warn">Outside the range the model was trained on (${f.min}–${f.max}). Treat the result with caution.</div>`;
+    el(f.g===1?'g1':'g2').appendChild(d);
+    const n=el('n-'+f.k), r=el('r-'+f.k);
+    n.addEventListener('input',()=>{ if(n.value==='')return; set(f,parseFloat(n.value),'n'); });
+    r.addEventListener('input',()=>set(f,parseFloat(r.value),'r'));
+    // driver row
+    const row=document.createElement('div');row.className='rowx';row.id='d-'+f.k;
+    row.innerHTML=`<div class="meta"><span>${f.label}</span><span></span></div><div class="bar"><div class="fill"></div></div>`;
+    el('drv').appendChild(row);
+  });
+}
+function set(f,v,src){
+  if(isNaN(v))return;
+  v=Math.min(f.ui[1],Math.max(f.ui[0],v));
+  state[f.k]=v;
+  if(src!=='n') el('n-'+f.k).value=fmt(f,v);
+  if(src!=='r') el('r-'+f.k).value=v;
+  update();
+}
+function load(vals){F.forEach(f=>set(f,vals[f.k],'x'));}
+
+function update(){
+  let z=B0;
+  F.forEach(f=>{
+    const v=state[f.k]; z+=f.c*scale(f,v);
+    el('f-'+f.k).classList.toggle('out', v<f.min || v>f.max);
+  });
+  const p=1/(1+Math.exp(-z));
+  const pct=Math.round(p*1000)/10;
+  el('pct').textContent=(pct<10||pct>=100?pct.toFixed(pct>=100?0:1):pct.toFixed(1))+'%';
+  const arc=el('arc'), L=282.74;
+  arc.style.strokeDashoffset=L*(1-p);
+  const band=p<0.3?['Lower estimated risk','var(--accent)']:p<0.5?['Moderate estimated risk','var(--warn)']:['Higher estimated risk','var(--up)'];
+  arc.style.stroke=band[1];
+  const b=el('band');b.textContent=band[0];b.style.color=band[1];
+  el('verdict').textContent=`Model output: ${p>=0.5?'positive':'negative'} at the 50% threshold.`;
+  F.forEach(f=>{
+    const v=state[f.k], d=f.c*(v-f.ref)/(f.max-f.min), mult=Math.exp(d);
+    const w=Math.min(1,Math.abs(d)/3)*50;
+    const row=el('d-'+f.k), fill=row.querySelector('.fill');
+    fill.className='fill '+(d>=0?'up':'dn'); fill.style.width=w+'%';
+    row.querySelector('.meta span:last-child').textContent=`${fmt(f,v)}${f.unit?' '+f.unit:''} · odds ×${mult.toFixed(2)}`;
+  });
+}
+
+build();
+const typical={}; F.forEach(f=>typical[f.k]=f.typ);
+el('ex-low').addEventListener('click',()=>load(typical));
+el('ex-high').addEventListener('click',()=>load(HIGH));
+load(typical);
+</script>
+</body>
+</html>

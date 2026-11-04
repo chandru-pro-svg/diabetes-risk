@@ -6,7 +6,7 @@ An interactive machine-learning web application that estimates diabetes risk usi
 
 ## 🌐 Live Demo
 
-👉 https://www.google.com/search?q=https://diabetes-risk-six.vercel.app
+👉 https://www.google.com/search?q=https://diabetes-risk-six.vercel.app](https://diabetes-risk-estimator.vercel.app/
 
 
 ---
